@@ -1,0 +1,88 @@
+﻿@page
+@model wallspace.Pages.loginModel
+
+@{
+}
+
+
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link rel="stylesheet" href="/css/login"/>
+    <link rel="stylesheet" href="~/css/login.css" />
+    <link rel="stylesheet" href="~/css/var.css" />
+
+    <title>WallSpace - login</title>
+</head>
+<body>
+    <div class="wrapper">
+        <div class="login">
+
+            <h1>Login</h1>
+            <div class="usrName">Username:</div>
+            <input type="text" id="uname" name="username" />
+            <div class="usrPassword">Password:</div>
+            <input type="text" id="upassword" name="password" />
+            <br>
+
+            <div class="left">
+                
+                    <button class="loginButton" onclick="logIn(document.getElementById('uname').value,document.getElementById('upassword').value)">login</button>
+                
+            </div>
+
+            <div class="right">
+                <a href="/signup">
+                    <button class="signupButton" onclick="">signup</button>
+                </a>
+            </div>
+
+        </div>
+    </div>
+
+    
+</body>
+</html>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"></script>
+
+<script>
+    const connection = new signalR.HubConnectionBuilder()
+        .withUrl("/chathub")
+        .build();
+
+    // Start the SignalR connection
+    connection.start()
+        .then(function () {
+            console.log("SignalR connection started.");
+            
+        })
+        .catch(function (err) {
+            console.error("Connection failed:", err.toString());
+        });
+
+
+
+
+
+    function logIn(username, password) {
+        console.log("logging in as user:" + username.toString());
+        console.log("Using password:" + password.toString());
+        connection.invoke("GetUsersWithValidPassword", username, password)
+            .then(function (users) {
+                users.forEach(function (user) {
+                    
+                    localStorage.setItem("user_id", user.id);
+                    window.location.href = "/";
+                });
+            })
+            .catch(function (err) {
+                console.error(err.toString());
+            });
+    }
+
+
+
+</script>

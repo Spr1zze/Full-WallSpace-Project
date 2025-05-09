@@ -1,0 +1,85 @@
+﻿@page
+@model wallspace.Pages.Shared.signupModel
+@{
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link rel="stylesheet" href="~/css/signup.css"/>
+    <link rel="stylesheet" href="~/css/var.css"/>
+
+    <title>WallSpace - signup</title>
+</head>
+<body>
+
+    <div class="wrapper">
+        <div class="signup">
+
+            <h1>Signup</h1>
+            <div class="usrName">Username:</div>
+            <input type="text" id="uname" name="username" />
+            <div class="usrPassword">Password:</div>
+            <input type="text" id="upassword" name="password" />
+            <br>
+
+            <div class="left">
+                <a href="/login">
+                    <button class="loginButton" onclick="">Login</button>
+                </a>
+            </div>
+
+            <div class="right">
+
+                <button class="signupButton" onclick="CreateUser(document.getElementById('uname').value,document.getElementById('upassword').value)">Create</button>
+                
+            </div>
+
+        </div>
+    </div>
+</body>
+</html>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"></script>
+
+<script>
+    const connection = new signalR.HubConnectionBuilder()
+        .withUrl("/chathub")
+        .build();
+
+    // Start the SignalR connection
+    connection.start()
+        .then(function () {
+            console.log("SignalR connection started.");
+
+        })
+        .catch(function (err) {
+            console.error("Connection failed:", err.toString());
+        });
+
+
+
+
+
+    async function CreateUser(username, password) {
+        console.log("creating user by name:" + username.toString());
+        console.log("creating user by password:" + password.toString());
+        
+        await connection.invoke("CreateUser", username, password)
+            .then(function (result) {
+                if (result === true) {
+                    console.log("its kewl");
+                } else {
+                    console.log("error or something");
+                }
+            })
+            .catch(function (err) {
+                console.error("Error creating user:", err.toString());
+            });
+    }
+
+
+
+</script>

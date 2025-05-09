@@ -1,0 +1,397 @@
+﻿@page
+@model wallspace.Pages.IndexModel
+
+
+
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+@{
+    ViewData["Title"] = "Chat";
+}
+<!-- 1v1-->
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>@ViewData["Title"]</title>
+</head>
+<body>
+    <header class="header">
+        <div id="logo-container">
+            <img src="images\WallSpace-LightGreen.png" id="logo" alt="failed to load LOGO">
+            <h1>Your wall. Your space.</h1>
+        </div>
+
+        <div id="header-button-container">
+            <button>Home</button>
+            <button onclick="window.location.href='/groups'">Groups</button>
+            <button onclick="window.location.href='/index'">Chat</button>
+            <button onclick="logout()">Logout</button>
+        </div>
+    </header>
+    <main>
+        <div id="sidebar-left">
+
+            <div id="groups-container">
+                <h1>Messages<button id="add-user-button" onclick="openGroupPopup()" title="create a group" >+</button></h1>
+                <ul id ="friend_chats">
+                    
+
+                </ul>
+            </div>
+        </div>
+
+        <section id="chat-container">
+            <div id="person-name-container">
+                <img id="pfp-center">
+                <h1 id="self-name"></h1> <!-- displays your username-->
+            </div>
+           
+
+            <!-- messages -->
+
+            <!-- prevents vertical overflow-->
+            <div id="message-container" style="height: 80%; overflow-y: scroll; border: 1px solid"> 
+                
+             
+                <!-- members list popup-->
+                <div id="members-container" style="display:none">
+                    Lars
+                    <button id="close-members-button" onclick="closeMembersContainer()">x</button> <!-- closes it-->
+                </div>
+                <!-- add groups popup-->
+                <div id="groups-popup" style="display:none">
+                    <div id="groups-popup-info">   
+                        <button id="close-groups-popup" onclick="closeGroupPopup()">X</button>
+                        <input type="text" id="searchbar" placeholder="Add a friend"></input> 
+                        
+                        <button onclick="addUserToFriendList()" id="create-group-button">Add friend</button>
+                    </div>
+                </div>
+
+                <ul id="messageList" style="list-style: none; padding: 0; margin: 0;">
+                    <!-- Previous messages will be displayed here -->
+                </ul>
+                
+            </div>
+            
+
+            <!-- text input-->
+            <div id="textbox">
+                <div id="pictures-gifs-container">
+                    <label for="pictureUpload" id="pictures-button" title="pictures">&#127909;</label>
+                    <input type="file" id="pictureUpload" style="display:none;" />
+
+                    <label id="gifs-button" type="file" title="gifs">&#128247;</label>
+                </div>
+                <textarea type="text" id="messageInput" placeholder="Type here..."></textarea>
+                <label id="emoji-button" title="emojis">&#128516;</label>
+            </div>
+        </section>
+        <div id="sidebar-right">
+            
+            <div id="person-button-container" style="display:block">
+                <div id="person-info-container">
+                    <img id="pfp-right" style="display:block">
+                    <h1 id="rightDisplayName">Joach. S.</h1>
+                </div>
+                
+                <button>Mute person</button>
+                <button id="members-button" onclick="openMembersContainer();closeGroupPopup()">Show members</button>
+                <button onclick="addUserToFriendList()">Invite people</button>
+                <input id="add-pfp"type="file" accept="image/*" ></input>  <!-- pfp input-->
+            </div>
+
+        </div>
+        
+
+
+    </main>
+   
+    <!-- SignalR script -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"></script>
+    <!-- messages javascript -->
+    <script>
+
+        const connection = new signalR.HubConnectionBuilder()
+            .withUrl("/chathub")
+            .build();
+
+        // Start the SignalR connection
+        connection.start()
+            .then(function () {
+                console.log("SignalR connection started.");
+
+                loadFriendList();
+                setSelfDisplay();
+
+
+                connection.invoke("joinUserChannel", parseInt(localStorage.getItem("user_id")))
+                    .then(function (usrID) {})
+                    .catch(function (err) {console.error(err.toString());});
+            })
+            .catch(function (err) {
+                console.error("Connection failed:", err.toString());
+            });
+
+       
+        //scrolls previous messages to bottom (doesn't work)
+        function scrollToBottom() {  
+           const container = document.getElementById("messagesList").parentElement;
+           container.scrollTop = container.scrollHeight;
+        }
+
+
+        
+        function openMembersContainer(){
+            document.getElementById("members-container").style.display = "block";
+        }
+
+        function closeMembersContainer(){
+            document.getElementById("members-container").style.display = "none";
+        }
+        function openGroupPopup(){
+            document.getElementById("groups-popup").style.display = "block";
+        }
+        function closeGroupPopup(){
+            document.getElementById("groups-popup").style.display = "none";
+        }
+        function logout(){
+            localStorage.setItem("user_id", "");
+
+            window.location.href = "login";
+        }
+        function loadChatrooms(){ //rooms/chatrooms/groups = same thing
+                connection.invoke("getEachChatroomID_WhereUser",2)
+                .then(function (rooms) {
+                     console.log("Loading chatrooms");
+                    rooms.forEach(function (room) {
+                        const li = document.createElement("room_");
+                                  li.innerHTML = `<button" onclick="loadMessagesFromChatroom(${room})"><h1>Name_Namesen</h1></button>`;
+                        document.getElementById("chatrooms").appendChild(li);
+                        console.log("A chatroom has been loaded");
+                    });
+                })
+                .catch(function (err) {
+                    console.error(err.toString());
+                });
+        }
+
+        function loadMessagesFromChatroom(id) //deprecated (???)
+        {
+            console.log("Opened messages from ");
+            console.log(id);
+        }
+         
+        async function loadFriendList() {
+            let clear = await async function () { document.getElementById("friend_chats").innerHTML = ""; };
+
+            connection.invoke("getPrivateChatroomID", parseInt(localStorage.getItem("user_id")))
+                .then(async function (chats) {
+                    if (chats.length == 0) {
+                        console.log("Hei there, my name is Chucky, wanna play!")
+                    }
+                    chats.forEach(async function (chat) {
+
+                        /*connection.invoke("getUserName_byID", parseInt(localStorage.getItem("user_id")))
+
+                        connection.invoke("getUserName_byID", parseInt(localStorage.getItem("user_id")))
+                            .then(function (chats) {
+
+                            })
+                            .catch(function (err) {
+                                console.error(err.toString());
+                            });*/
+                        try {
+                            // Call the server-side function to get the users in the chatroom
+                            const users = await connection.invoke("getPrivateChatroomUsersByRoomID", parseInt(chat));
+
+                            let friend;
+
+                            // Determine which user is not the current user and fetch the friend's username
+                            if (users[0] == parseInt(localStorage.getItem("user_id"))) {
+                                friend = await connection.invoke("getUserName_byID", parseInt(users[1]));
+                            } else {
+                                friend = await connection.invoke("getUserName_byID", parseInt(users[0]));
+                            }
+                            const truncatedFriendName = friend.length > 14 ? friend.substring(0, 14) + "..." : friend; //truncates long names to 14 chars
+                            // Create a new list item (li) and add the friend name to it
+                            const li = document.createElement("li");
+                            li.innerHTML = ` <button onClick="showMessages(${chat}); setRightDisplay('no image','${truncatedFriendName}');"><h1>${truncatedFriendName}</h1></button>`;
+
+                            // Append the new li element to the list of friends
+                            document.getElementById("friend_chats").appendChild(li);
+                           
+
+                        } catch (err) {
+                            console.error("Error in addChatroomToUI:", err.toString());
+                        }
+                        
+                        
+                    });
+                })
+                .catch(function (err) {
+                    console.error(err.toString());
+                });
+        }
+
+        async function showMessages(chatroom) 
+        { 
+            if (localStorage.getItem("current_channel_id") != null) {
+                connection.invoke("exitChatroomChannel", parseInt(localStorage.getItem("current_channel_id")));
+            }
+
+            connection.invoke("GetMessagesFromChatroom", parseInt(chatroom), 0, 100)
+                .then(async function (messages) {
+
+                    localStorage.setItem("current_channel_id", chatroom);
+
+                    document.getElementById("messageList").innerHTML = "";
+
+                    if (messages.length == 0) {
+                        console.log("Hei there, my name is Chucky, wanna play!")
+                    }
+                    messages.forEach(async function (message) {
+
+                        let msgSender = await connection.invoke("getUserName_byID", parseInt(message.user_id));
+
+                        
+
+                        const li = document.createElement("li");
+                        li.innerHTML = `${msgSender}: ${message.message}`;
+                        document.getElementById("messageList").appendChild(li);
+
+                    });
+                })
+                .catch(function (err) {
+                    console.error(err.toString());
+                });
+        }
+
+        connection.on("ReceiveMessage", async function (message, user_id) {
+            console.log(`Message from user ${user_id}: ${message}`);
+
+
+            let msgSender = await connection.invoke("getUserName_byID", parseInt(user_id));
+
+            const li = document.createElement("li");
+           
+            li.innerHTML = `${msgSender}: ${message}`; //now displays new messages right away -Zergey
+            
+            document.getElementById("messageList").appendChild(li);
+            
+        });
+
+        //Tells the program to update the users list
+        connection.on("updateChatroomList", async function () {
+            loadFriendList();
+
+        });
+
+        function changeDisplayToUser() {
+            //rightDisplayName
+
+
+        
+        }
+
+        async function addUserToFriendList()
+        {
+            //searchbar, 
+            let userID;
+            const chatroomsContainer = document.getElementById("friend_chats");
+            chatroomsContainer.innerHTML = "";
+            await connection.invoke("getUserID_byName", document.getElementById('searchbar').value)
+                .then(function (usrID) {
+
+                    userID = usrID;
+                })
+                .catch(function (err) {
+                    console.error(err.toString());
+                });
+
+
+            connection.invoke("createOneToOneChatroom", parseInt(localStorage.getItem("user_id")), userID)
+                .then(function (result) {
+
+                })
+                .catch(function (err) {
+                    console.error(err.toString());
+                });
+        }
+
+
+
+        const input = document.getElementById("messageInput");
+
+        input.addEventListener("keydown", function (event) {
+            if (event.key === "Enter") {
+                
+                connection.invoke("SendMessage", input.value, parseInt(localStorage.getItem("current_channel_id")), parseInt(localStorage.getItem("user_id")))
+                    .then(function (usrID) {
+                        input.value = "";
+                    })
+                    .catch(function (err) {
+                        console.error(err.toString());
+                    });
+            }
+            
+        });
+
+        function setRightDisplay(image, name) {
+            const nameHolder = document.getElementById("rightDisplayName");
+            nameHolder.textContent = name; // Safe against injection
+
+            const pfpHolder = document.getElementById("rightDisplayPfp");
+
+            const defaultImage = "path/to/default-image.png"; // Replace with your fallback image path
+            const imageToUse = (image && image !== "no image") ? image : defaultImage;
+
+            pfpHolder.setAttribute('src', imageToUse);
+        }
+
+        document.getElementById("add-pfp").addEventListener("change", function (event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    const base64String = e.target.result.split(',')[1]; // Remove data:image/...;base64, part
+                    // Call the SignalR method with the base64 string
+                    connection.invoke("UploadImageFromBase64Async", base64String, "img_name", parseInt(localStorage.getItem("user_id")))
+                        .then(response => {
+                            console.log("Upload successful:", response);
+                        })
+                        .catch(err => {
+                            console.error("Upload failed:", err);
+                        });
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        async function setSelfDisplay()
+        {
+            let userName = await connection.invoke("getUserName_byID", parseInt(localStorage.getItem("user_id")));
+            
+            const nameHolder  = document.getElementById("self-name");
+            
+            nameHolder.textContent = userName;
+
+            try {
+                let userPicture = await connection.invoke("getProfilePicture", parseInt(localStorage.getItem("user_id")));
+                const pfpHolder = document.getElementById("pfp-center");
+                pfpHolder.src = "images/" + userPicture;
+            }
+            catch (ex) {
+                console.log("can't load picture, might be missing: " + ex)
+            }
+            //getProfilePicture     pfp-center*/
+        }
+
+    </script>
+
+</body>
+</html>
+
+
+

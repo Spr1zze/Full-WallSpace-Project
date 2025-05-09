@@ -1,0 +1,111 @@
+﻿@page
+@model wallspace.Pages.GenericTestPageModel
+@{
+}
+
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link rel="stylesheet" href="/css/login" /><!--Disabled for testing-->
+
+    <title>WallSpace - login</title>
+</head>
+<body>
+    <div id="test_ID">AH</div>
+    <div class="wrapper">
+        <div class="login">
+
+            <h1>USER ID</h1>
+            <input type="number" id="uid" name="userID" />
+            <h1>SELECTED CHATROOM</h1>
+            <input type="number" id="s_chatroom" name="Selected Chatroom" />
+            <h1>USER MESSAGE</h1>
+            <input type="text" id="umsg" name="User message" />
+            <br>
+
+            <div class="left">
+
+                <button class="loginButton" onclick="GetMessagesFromChatroom(document.getElementById('s_chatroom').value)">loadMessages</button>
+
+            </div>
+
+            <div class="right">
+
+                <button class="signupButton" onclick="sendMsg(document.getElementById('umsg').value, document.getElementById('s_chatroom').value, document.getElementById('uid').value)">sendMSG</button>
+                <button class="signupButton" onclick="createChatroom()">Create Chatroom</button>
+            </div>
+
+        </div>
+    </div>
+
+
+</body>
+</html>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"></script>
+
+<script>
+    const connection = new signalR.HubConnectionBuilder()
+        .withUrl("/chathub")
+        .build();
+
+    // Start the SignalR connection
+    connection.start()
+        .then(function () {
+            console.log("SignalR connection started.");
+
+        })
+        .catch(function (err) {
+            console.error("Connection failed:", err.toString());
+        });
+
+
+
+
+
+    function GetMessagesFromChatroom(chatroom_id) {
+        connection.invoke("GetMessagesFromChatroom", parseInt(chatroom_id), 0, 100)
+            .then(function (messages) {
+                if (messages.length == 0) {
+                    console.log("Hei there, my name is Chucky, wanna play!")
+                }
+                messages.forEach(function (message) {
+
+                    const li = document.createElement("li");
+                    li.innerHTML = `${message.message}: ${message.user_id}`;
+                    document.getElementById("test_ID").appendChild(li);
+
+                });
+            })
+            .catch(function (err) {
+                console.error(err.toString());
+            });
+    }
+
+    function sendMsg(message, chatroom_id, user_id) {
+        connection.invoke("SendMessage", message, parseInt(chatroom_id), parseInt(user_id))
+
+            .then(function (smthng) {
+                
+                console.log("Sending message :D");
+            })
+            .catch(function (err) {
+                console.error(err.toString());
+            });
+            
+    }
+
+    function createChatroom() {
+        connection.invoke("CreateChatroom")
+            .then(function (smthng) {
+
+            })
+            .catch(function (err) {
+                console.error(err.toString());
+            });
+    }
+
+
+</script>
